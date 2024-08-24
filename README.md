@@ -273,3 +273,111 @@ aws rds create-db-subnet-group --db-subnet-group-name "wa-rds-subnet-group" --db
     }
 }
 ```
+Amazon RDS が使用するセキュリティグループを作成します。
+```
+aws ec2 create-security-group --description "RDS Security group" --group-name "wa-rds-sg" --vpc-id $VPC --region $awsRegion
+```
+出力
+```
+{
+    "GroupId": "sg-08fe48f5a098d6e3f"
+}
+```
+Amazon RDS セキュリティグループ ID を環境変数として設定します。
+```
+export rdsSg=`aws ec2 describe-security-groups --filters Name=group-name,Values=wa-rds-sg --query 'SecurityGroups[*].GroupId' --output text --region $awsRegion` && echo rdsSg=$rdsSg >> ~/.bashrc
+```
+Amazon EC2 データベースインスタンスが使用する 2 つ目のセキュリティグループ ID の環境変数を設定します。
+```
+export ec2DbSg=`aws ec2 describe-security-groups --filters Name=group-name,Values=wa-database-sg --query 'SecurityGroups[*].GroupId' --output text --region $awsRegion` && echo ec2DbSg=$ec2DbSg >> ~/.bashrc
+```
+Amazon RDS セキュリティグループが Amazon EC2 データベースインスタンスが使用するセキュリティグループと通信できるようにします。
+```
+aws ec2 authorize-security-group-ingress --group-id $rdsSg --source-group $ec2DbSg --protocol "tcp" --port "3306" --region $awsRegion
+```
+マルチ AZ Amazon RDS インスタンスを作成します。
+```
+aws rds create-db-instance --db-name "WaRdsDb" --db-instance-identifier "waDbInstance" --allocated-storage 20 --db-instance-class db.t3.micro --engine "mariadb" --master-username "mainuser" --master-user-password "WaStr0ngP4ssw0rd" --vpc-security-group-ids $rdsSg --db-subnet-group-name "wa-rds-subnet-group" --multi-az --no-publicly-accessible --backup-retention-period 0 --region $awsRegion
+```
+出力
+```
+{
+    "DBInstance": {
+        "PubliclyAccessible": false,
+        "MasterUsername": "mainuser",
+        "MonitoringInterval": 0,
+        "LicenseModel": "general-public-license",
+        "VpcSecurityGroups": [
+            {
+                "Status": "active",
+                "VpcSecurityGroupId": "sg-08fe48f5a098d6e3f"
+            }
+        ],
+        "CopyTagsToSnapshot": false,
+        "OptionGroupMemberships": [
+            {
+                "Status": "in-sync",
+                "OptionGroupName": "default:mariadb-10-11"
+            }
+        ],
+        "PendingModifiedValues": {
+            "MasterUserPassword": "****"
+        },
+        "Engine": "mariadb",
+        "MultiAZ": true,
+        "DBSecurityGroups": [],
+        "DBParameterGroups": [
+            {
+                "DBParameterGroupName": "default.mariadb10.11",
+                "ParameterApplyStatus": "in-sync"
+            }
+        ],
+        "PerformanceInsightsEnabled": false,
+        "AutoMinorVersionUpgrade": true,
+        "PreferredBackupWindow": "05:23-05:53",
+        "DBSubnetGroup": {
+            "Subnets": [
+                {
+                    "SubnetStatus": "Active",
+                    "SubnetIdentifier": "subnet-03d390f2fdfb8e35b",
+                    "SubnetOutpost": {},
+                    "SubnetAvailabilityZone": {
+                        "Name": "us-east-1a"
+                    }
+                },
+                {
+                    "SubnetStatus": "Active",
+                    "SubnetIdentifier": "subnet-0d651df68f4a6b9a7",
+                    "SubnetOutpost": {},
+                    "SubnetAvailabilityZone": {
+                        "Name": "us-east-1b"
+                    }
+                }
+            ],
+            "DBSubnetGroupName": "wa-rds-subnet-group",
+            "VpcId": "vpc-0a296354b51520c5d",
+            "DBSubnetGroupDescription": "WA RDS Subnet Group",
+            "SubnetGroupStatus": "Complete"
+        },
+        "ReadReplicaDBInstanceIdentifiers": [],
+        "AllocatedStorage": 20,
+        "DBInstanceArn": "arn:aws:rds:us-east-1:238827011620:db:wadbinstance",
+        "BackupRetentionPeriod": 0,
+        "DBName": "WaRdsDb",
+        "PreferredMaintenanceWindow": "fri:03:40-fri:04:10",
+        "DBInstanceStatus": "creating",
+        "IAMDatabaseAuthenticationEnabled": false,
+        "EngineVersion": "10.11.8",
+        "DeletionProtection": false,
+        "DomainMemberships": [],
+        "StorageType": "gp2",
+        "DbiResourceId": "db-EWAO2B4QVDWNI5GTDD4RBHTH24",
+        "CACertificateIdentifier": "rds-ca-rsa2048-g1",
+        "StorageEncrypted": false,
+        "AssociatedRoles": [],
+        "DBInstanceClass": "db.t3.micro",
+        "DbInstancePort": 0,
+        "DBInstanceIdentifier": "wadbinstance"
+    }
+}
+```
