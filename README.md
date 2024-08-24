@@ -22,3 +22,11 @@ export awsRegion=`curl -s http://169.254.169.254/latest/meta-data/placement/regi
 ```
 export VPC=`aws ec2 describe-vpcs --filters Name=tag:Name,Values=wa-lab-vpc --query 'Vpcs[*].VpcId' --output text --region $awsRegion` && echo VPC=$VPC >> ~/.bashrc
 ```
+AWS リージョンの最初のアベイラビリティーゾーンのIDを環境変数を設定します。
+```
+export awsAZ1=`aws ec2 describe-availability-zones --region $awsRegion --query 'AvailabilityZones[].ZoneName[]|[0]' --output text` && echo awsAZ1=$awsAZ1 >> ~/.bashrc
+```
+AWS リージョンの 2 つ目のアベイラビリティーゾーンの環境変数を設定します。
+```
+export awsAZ2=`aws ec2 describe-availability-zones --region $awsRegion --query 'AvailabilityZones[].ZoneName[]|[1]' --output text` && echo awsAZ2=$awsAZ2 >> ~/.bashrc
+```
