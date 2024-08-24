@@ -134,3 +134,141 @@ aws ec2 associate-route-table --subnet-id $privateSubnetId --route-table-id $pri
     "AssociationId": "rtbassoc-0ef7937d44b5f94ee"
 }
 ```
+
+## Task 2
+<img src="https://github.com/osonoi/AWS_CLI/blob/main/fig1.jpg">
+１つ目のアベイラビリティーゾーンに RDS サブネットを作成します。
+```
+aws ec2 create-subnet --vpc-id $VPC --cidr-block "10.100.4.0/24" --availability-zone $awsAZ1 --tag-specifications 'ResourceType=subnet, Tags=[{Key=Name,Value=wa-rds-subnet-1}]' --region $awsRegion
+```
+出力
+```
+{
+    "AssociationState": {
+        "State": "associated"
+    },
+    "AssociationId": "rtbassoc-0ef7937d44b5f94ee"
+}
+sh-4.2$ aws ec2 create-subnet --vpc-id $VPC --cidr-block "10.100.4.0/24" --availability-zone $awsAZ1 --tag-specifications 'ResourceType=subnet, Tags=[{Key=Name,Value=wa-rds-subnet-1}]' --region $awsRegion
+{
+    "Subnet": {
+        "MapPublicIpOnLaunch": false,
+        "AvailabilityZoneId": "use1-az4",
+        "Tags": [
+            {
+                "Value": "wa-rds-subnet-1",
+                "Key": "Name"
+            }
+        ],
+        "AvailableIpAddressCount": 251,
+        "DefaultForAz": false,
+        "SubnetArn": "arn:aws:ec2:us-east-1:238827011620:subnet/subnet-03d390f2fdfb8e35b",
+        "Ipv6CidrBlockAssociationSet": [],
+        "VpcId": "vpc-0a296354b51520c5d",
+        "State": "available",
+        "AvailabilityZone": "us-east-1a",
+        "SubnetId": "subnet-03d390f2fdfb8e35b",
+        "OwnerId": "238827011620",
+        "CidrBlock": "10.100.4.0/24",
+        "AssignIpv6AddressOnCreation": false
+    }
+}
+```
+2 つ目のアベイラビリティーゾーンに Amazon RDS サブネットを作成します。
+```
+aws ec2 create-subnet --vpc-id $VPC --cidr-block "10.100.5.0/24" --availability-zone $awsAZ2 --tag-specifications 'ResourceType=subnet, Tags=[{Key=Name,Value=wa-rds-subnet-2}]' --region $awsRegion
+```
+出力
+```
+{
+    "Subnet": {
+        "MapPublicIpOnLaunch": false,
+        "AvailabilityZoneId": "use1-az6",
+        "Tags": [
+            {
+                "Value": "wa-rds-subnet-2",
+                "Key": "Name"
+            }
+        ],
+        "AvailableIpAddressCount": 251,
+        "DefaultForAz": false,
+        "SubnetArn": "arn:aws:ec2:us-east-1:238827011620:subnet/subnet-0d651df68f4a6b9a7",
+        "Ipv6CidrBlockAssociationSet": [],
+        "VpcId": "vpc-0a296354b51520c5d",
+        "State": "available",
+        "AvailabilityZone": "us-east-1b",
+        "SubnetId": "subnet-0d651df68f4a6b9a7",
+        "OwnerId": "238827011620",
+        "CidrBlock": "10.100.5.0/24",
+        "AssignIpv6AddressOnCreation": false
+    }
+}
+```
+新しい Amazon RDS サブネットの最初のものを環境変数として追加します。
+```
+export rdsSubnet1Id=`aws ec2 describe-subnets --filters Name=tag:Name,Values=wa-rds-subnet-1 --query 'Subnets[*].SubnetId' --output text --region $awsRegion` && echo rdsSubnet1Id=$rdsSubnet1Id >> ~/.bashrc
+```
+新しい Amazon RDS サブネットの 2 つ目を環境変数として追加します。
+```
+export rdsSubnet2Id=`aws ec2 describe-subnets --filters Name=tag:Name,Values=wa-rds-subnet-2 --query 'Subnets[*].SubnetId' --output text --region $awsRegion` && echo rdsSubnet2Id=$rdsSubnet2Id >> ~/.bashrc
+```
+プライベートルートテーブルを最初の Amazon RDS サブネットにアソシエイト。
+```
+aws ec2 associate-route-table --subnet-id $rdsSubnet1Id --route-table-id $privateRt --region $awsRegion
+```
+出力
+```
+{
+    "AssociationState": {
+        "State": "associated"
+    },
+    "AssociationId": "rtbassoc-0720c4747473f5566"
+}
+```
+プライベートルートテーブルを 2 つ目の Amazon RDS サブネットに関連付けます。
+```
+aws ec2 associate-route-table --subnet-id $rdsSubnet2Id --route-table-id $privateRt --region $awsRegion
+```
+出力
+```
+{
+    "AssociationState": {
+        "State": "associated"
+    },
+    "AssociationId": "rtbassoc-05a3d042dbbcf8d39"
+}
+```
+新しい Amazon RDS サブネットの両方を使用して Amazon RDS サブネットグループを作成します。
+```
+aws rds create-db-subnet-group --db-subnet-group-name "wa-rds-subnet-group" --db-subnet-group-description "WA RDS Subnet Group" --subnet-ids $rdsSubnet1Id $rdsSubnet2Id --region $awsRegion
+```
+出力
+```
+{
+    "DBSubnetGroup": {
+        "Subnets": [
+            {
+                "SubnetStatus": "Active",
+                "SubnetIdentifier": "subnet-03d390f2fdfb8e35b",
+                "SubnetOutpost": {},
+                "SubnetAvailabilityZone": {
+                    "Name": "us-east-1a"
+                }
+            },
+            {
+                "SubnetStatus": "Active",
+                "SubnetIdentifier": "subnet-0d651df68f4a6b9a7",
+                "SubnetOutpost": {},
+                "SubnetAvailabilityZone": {
+                    "Name": "us-east-1b"
+                }
+            }
+        ],
+        "VpcId": "vpc-0a296354b51520c5d",
+        "DBSubnetGroupDescription": "WA RDS Subnet Group",
+        "SubnetGroupStatus": "Complete",
+        "DBSubnetGroupArn": "arn:aws:rds:us-east-1:238827011620:subgrp:wa-rds-subnet-group",
+        "DBSubnetGroupName": "wa-rds-subnet-group"
+    }
+}
+```
