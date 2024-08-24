@@ -137,6 +137,7 @@ aws ec2 associate-route-table --subnet-id $privateSubnetId --route-table-id $pri
 
 ## Task 2
 <img src="https://github.com/osonoi/AWS_CLI/blob/main/fig1.jpg">
+
 １つ目のアベイラビリティーゾーンに RDS サブネットを作成します。
 ```
 aws ec2 create-subnet --vpc-id $VPC --cidr-block "10.100.4.0/24" --availability-zone $awsAZ1 --tag-specifications 'ResourceType=subnet, Tags=[{Key=Name,Value=wa-rds-subnet-1}]' --region $awsRegion
