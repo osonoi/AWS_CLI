@@ -605,4 +605,20 @@ aws elbv2 create-listener --load-balancer-arn $albArn --protocol "HTTP" --port 8
 }
 ```
 
+## Task 7
+## EC2 Auto Scaling グループを作成する
+
+Amazon EC2 Auto Scaling グループに含まれる最初のサブネットを環境変数として設定します。
+```
+export asgSubnet1Id=`aws ec2 describe-subnets --filters Name=tag:Name,Values=wa-private-subnet-1 --query 'Subnets[*].SubnetId' --output text --region $awsRegion` && echo asgSubnet1Id=$asgSubnet1Id >> ~/.bashrc
+```
+Amazon EC2 Auto Scaling グループに含まれる 2 つ目のサブネットを環境変数として設定します。
+```
+export asgSubnet2Id=`aws ec2 describe-subnets --filters Name=tag:Name,Values=wa-private-subnet-2 --query 'Subnets[*].SubnetId' --output text --region $awsRegion` && echo asgSubnet2Id=$asgSubnet2Id >> ~/.bashrc
+```
+以前に作成した起動テンプレートを参照して Amazon EC2 Auto Scaling グループを作成します。
+```
+aws autoscaling create-auto-scaling-group --auto-scaling-group-name "waAutoscaleGroup" --launch-template LaunchTemplateId=$waLaunchTemplate --min-size "2" --max-size "4" --target-group-arns $waTg --vpc-zone-identifier "$asgSubnet1Id,$asgSubnet2Id" --region $awsRegion
+```
+
 
