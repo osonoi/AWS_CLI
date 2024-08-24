@@ -1,5 +1,6 @@
 # AWS_CLI
-
+## Task 1
+<img src=fig1.jpg>
 ターミナルに"envsubst" パッケージをインストール。シェルフォーマットの文字列をテキストの環境変数で置き換えるもの
 ```
 sudo yum install gettext -y
