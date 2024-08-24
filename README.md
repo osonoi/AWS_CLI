@@ -439,3 +439,169 @@ aws ssm get-parameters --names "DbPrivateDns" --output table --region $awsRegion
 ||  arn:aws:ssm:us-east-1:238827011620:parameter/DbPrivateDns |  text     |  1724497618.98    |  DbPrivateDns |  String |  wadbinstance.cot2b1yqmec9.us-east-1.rds.amazonaws.com  |  2       ||
 |+------------------------------------------------------------+-----------+-------------------+---------------+---------+---------------------------------------------------------+----------+|
 ```
+
+## Task 4
+<img src="https://github.com/osonoi/AWS_CLI/blob/main/fig1.jpg">
+
+Application Load Balancer (ALB) のセキュリティグループを作成します。
+```
+aws ec2 create-security-group --description "ALB Security group" --group-name "wa-alb-sg" --vpc-id $VPC --region $awsRegion
+```
+出力
+```
+{
+    "GroupId": "sg-09ff981c9cf8df36b"
+}
+```
+Application Load Balancer セキュリティグループを環境変数として設定します
+```
+export albSg=`aws ec2 describe-security-groups --filters Name=group-name,Values=wa-alb-sg --query 'SecurityGroups[*].GroupId' --output text --region $awsRegion` && echo albSg=$albSg >> ~/.bashrc
+```
+Application Load Balancer セキュリティグループを介した HTTP アクセスを許可します。
+```
+aws ec2 authorize-security-group-ingress --group-id $albSg --protocol "tcp" --port "80" --cidr "0.0.0.0/0" --region $awsRegion
+```
+Application Load Balancer が使用する最初のパブリックサブネットを環境変数として設定します。
+```
+export albSubnet1Id=`aws ec2 describe-subnets --filters Name=tag:Name,Values=wa-public-subnet-1 --query 'Subnets[*].SubnetId' --output text --region $awsRegion` && echo albSubnet1Id=$albSubnet1Id >> ~/.bashrc
+```
+Application Load Balancer が使用する 2 つ目のパブリックサブネットを環境変数として設定します。
+```
+export albSubnet2Id=`aws ec2 describe-subnets --filters Name=tag:Name,Values=wa-public-subnet-2 --query 'Subnets[*].SubnetId' --output text --region $awsRegion` && echo albSubnet2Id=$albSubnet2Id >> ~/.bashrc
+```
+Application Load Balancer を作成します。
+```
+aws elbv2 create-load-balancer --name "waAlb" --subnets $albSubnet1Id $albSubnet2Id --security-groups $albSg --type "application" --region $awsRegion
+```
+出力
+```
+{
+    "LoadBalancers": [
+        {
+            "IpAddressType": "ipv4",
+            "VpcId": "vpc-0a296354b51520c5d",
+            "LoadBalancerArn": "arn:aws:elasticloadbalancing:us-east-1:238827011620:loadbalancer/app/waAlb/a6c9b0c0db02c959",
+            "State": {
+                "Code": "provisioning"
+            },
+            "DNSName": "waAlb-503572362.us-east-1.elb.amazonaws.com",
+            "SecurityGroups": [
+                "sg-09ff981c9cf8df36b"
+            ],
+            "LoadBalancerName": "waAlb",
+            "CreatedTime": "2024-08-24T11:15:05.740Z",
+            "Scheme": "internet-facing",
+            "Type": "application",
+            "CanonicalHostedZoneId": "Z35SXDOTRQ7X7K",
+            "AvailabilityZones": [
+                {
+                    "SubnetId": "subnet-035dfb7bd05f76724",
+                    "LoadBalancerAddresses": [],
+                    "ZoneName": "us-east-1a"
+                },
+                {
+                    "SubnetId": "subnet-0f191ca93f95b8082",
+                    "LoadBalancerAddresses": [],
+                    "ZoneName": "us-east-1b"
+                }
+            ]
+        }
+    ]
+}
+```
+ターゲットグループを作成します。
+```
+aws elbv2 create-target-group --name "waAutoscale-tg" --protocol "HTTP" --port 80 --vpc-id $VPC --target-type "instance" --region $awsRegion
+```
+出力
+```
+{
+    "TargetGroups": [
+        {
+            "HealthCheckPath": "/",
+            "HealthCheckIntervalSeconds": 30,
+            "VpcId": "vpc-0a296354b51520c5d",
+            "Protocol": "HTTP",
+            "HealthCheckTimeoutSeconds": 5,
+            "TargetType": "instance",
+            "HealthCheckProtocol": "HTTP",
+            "Matcher": {
+                "HttpCode": "200"
+            },
+            "UnhealthyThresholdCount": 2,
+            "HealthyThresholdCount": 5,
+            "TargetGroupArn": "arn:aws:elasticloadbalancing:us-east-1:238827011620:targetgroup/waAutoscale-tg/21f859df0a64cb1a",
+            "HealthCheckEnabled": true,
+            "HealthCheckPort": "traffic-port",
+            "Port": 80,
+            "TargetGroupName": "waAutoscale-tg"
+        }
+    ]
+}
+```
+ターゲットグループを環境変数として設定します。
+```
+export waTg=`aws elbv2 describe-target-groups --names waAutoscale-tg --query 'TargetGroups[*].TargetGroupArn' --output text --region $awsRegion` && echo waTg=$waTg >> ~/.bashrc
+```
+Application Load Balancer の Amazon Resource Name (ARN) を環境変数として設定します。
+```
+export albArn=`aws elbv2 describe-load-balancers --names waAlb --query 'LoadBalancers[*].LoadBalancerArn' --output text --region $awsRegion` && echo albArn=$albArn >> ~/.bashrc
+```
+テンプレート listener.json ファイルをシェルインスタンスにダウンロードします。
+```
+cd ~
+wget https://aws-tc-largeobjects.s3-us-west-2.amazonaws.com/ILT-TF-200-CSAWAF-10-EN/listener-source.json
+```
+出力
+```
+--2024-08-24 11:19:05--  https://aws-tc-largeobjects.s3-us-west-2.amazonaws.com/ILT-TF-200-CSAWAF-10-EN/listener-source.json
+Resolving aws-tc-largeobjects.s3-us-west-2.amazonaws.com (aws-tc-largeobjects.s3-us-west-2.amazonaws.com)... 52.92.176.170, 52.218.170.1, 3.5.87.114, ...
+Connecting to aws-tc-largeobjects.s3-us-west-2.amazonaws.com (aws-tc-largeobjects.s3-us-west-2.amazonaws.com)|52.92.176.170|:443... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 96 [application/json]
+Saving to: ‘listener-source.json’
+
+100%[===================================================================================================================================================================>] 96          --.-K/s   in 0s
+
+2024-08-24 11:19:06 (1.37 MB/s) - ‘listener-source.json’ saved [96/96]
+```
+テンプレート内の環境変数をターゲットグループに置き換え、新しいテンプレートファイルを作成します。
+```
+envsubst < "listener-source.json" > "listener.json"
+```
+テンプレートファイルを参照して Application Load Balancer のリスナーを作成します。
+```
+aws elbv2 create-listener --load-balancer-arn $albArn --protocol "HTTP" --port 80 --default-actions file://listener.json --region $awsRegion
+```
+出力
+```
+{
+    "Listeners": [
+        {
+            "Protocol": "HTTP",
+            "DefaultActions": [
+                {
+                    "ForwardConfig": {
+                        "TargetGroupStickinessConfig": {
+                            "Enabled": false
+                        },
+                        "TargetGroups": [
+                            {
+                                "TargetGroupArn": "arn:aws:elasticloadbalancing:us-east-1:238827011620:targetgroup/waAutoscale-tg/21f859df0a64cb1a",
+                                "Weight": 1
+                            }
+                        ]
+                    },
+                    "TargetGroupArn": "arn:aws:elasticloadbalancing:us-east-1:238827011620:targetgroup/waAutoscale-tg/21f859df0a64cb1a",
+                    "Type": "forward",
+                    "Order": 1
+                }
+            ],
+            "LoadBalancerArn": "arn:aws:elasticloadbalancing:us-east-1:238827011620:loadbalancer/app/waAlb/a6c9b0c0db02c959",
+            "Port": 80,
+            "ListenerArn": "arn:aws:elasticloadbalancing:us-east-1:238827011620:listener/app/waAlb/a6c9b0c0db02c959/54a123f9e846f811"
+        }
+    ]
+}
+```
+
