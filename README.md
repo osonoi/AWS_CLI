@@ -90,3 +90,45 @@ aws ec2 create-subnet --vpc-id $VPC --cidr-block "10.100.3.0/24" --availability-
     }
 }
 ```
+新しいパブリックサブネットを環境変数として追加します。
+```
+export publicSubnetId=`aws ec2 describe-subnets --filters Name=tag:Name,Values=wa-public-subnet-2 --query 'Subnets[*].SubnetId' --output text --region $awsRegion` && echo publicSubnetId=$publicSubnetId >> ~/.bashrc
+```
+新しいプライベートサブネットを環境変数として追加します。
+```
+export privateSubnetId=`aws ec2 describe-subnets --filters Name=tag:Name,Values=wa-private-subnet-2 --query 'Subnets[*].SubnetId' --output text --region $awsRegion` && echo privateSubnetId=$privateSubnetId >> ~/.bashrc
+```
+既存のパブリックルートテーブルを環境変数として追加します。
+```
+export publicRt=`aws ec2 describe-route-tables --filters Name=tag:Name,Values=wa-public-rt --query 'RouteTables[*].RouteTableId' --output text --region $awsRegion` && echo publicRt=$publicRt >> ~/.bashrc
+```
+既存のプライベートルートテーブルを環境変数として追加します。
+```
+export privateRt=`aws ec2 describe-route-tables --filters Name=tag:Name,Values=wa-private-rt --query 'RouteTables[*].RouteTableId' --output text --region $awsRegion` && echo privateRt=$privateRt >> ~/.bashrc
+```
+2 つ目のアベイラビリティーゾーンで作成されたパブリックサブネットを含む既存のパブリックルートテーブルに関連付ける。
+```
+aws ec2 associate-route-table --subnet-id $publicSubnetId --route-table-id $publicRt --region $awsRegion
+```
+出力
+```
+{
+    "AssociationState": {
+        "State": "associated"
+    },
+    "AssociationId": "rtbassoc-0754972f40549eba1"
+}
+```
+2 つ目のアベイラビリティーゾーンで作成されたプライベートサブネットを含む既存のプライベートルートテーブルに関連付ける。
+```
+aws ec2 associate-route-table --subnet-id $privateSubnetId --route-table-id $privateRt --region $awsRegion
+```
+出力
+```
+{
+    "AssociationState": {
+        "State": "associated"
+    },
+    "AssociationId": "rtbassoc-0ef7937d44b5f94ee"
+}
+```
