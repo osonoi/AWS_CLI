@@ -1,6 +1,6 @@
 # AWS_CLI
 ## Task 1
-<img src="https://github.com/osonoi/AWS_CLI/blob/main/fig1.jpg">
+<img src="https://github.com/osonoi/AWS_CLI/blob/main/fig1.png">
 
 ターミナルに"envsubst" パッケージをインストール。シェルフォーマットの文字列をテキストの環境変数で置き換えるもの
 ```
