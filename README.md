@@ -136,7 +136,7 @@ aws ec2 associate-route-table --subnet-id $privateSubnetId --route-table-id $pri
 ```
 
 ## Task 2
-<img src="https://github.com/osonoi/AWS_CLI/blob/main/fig1.jpg">
+<img src="https://github.com/osonoi/AWS_CLI/blob/main/fig2.jpg">
 
 １つ目のアベイラビリティーゾーンに RDS サブネットを作成します。
 ```
@@ -441,7 +441,7 @@ aws ssm get-parameters --names "DbPrivateDns" --output table --region $awsRegion
 ```
 
 ## Task 4
-<img src="https://github.com/osonoi/AWS_CLI/blob/main/fig1.jpg">
+<img src="https://github.com/osonoi/AWS_CLI/blob/main/fig4.jpg">
 
 Application Load Balancer (ALB) のセキュリティグループを作成します。
 ```
@@ -606,7 +606,8 @@ aws elbv2 create-listener --load-balancer-arn $albArn --protocol "HTTP" --port 8
 ```
 
 ## Task 7
-## EC2 Auto Scaling グループを作成する
+<img src="https://github.com/osonoi/AWS_CLI/blob/main/fig7.jpg">
+
 
 Amazon EC2 Auto Scaling グループに含まれる最初のサブネットを環境変数として設定します。
 ```
